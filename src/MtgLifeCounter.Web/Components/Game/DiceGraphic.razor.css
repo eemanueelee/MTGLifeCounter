@@ -1,0 +1,47 @@
+.die {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* Sfumatura del corpo del dado: dai colori del tema (in Ludipop, viola → indaco). */
+.stop-start {
+    stop-color: var(--accent);
+}
+
+.stop-end {
+    stop-color: var(--accent-2);
+}
+
+/* Il contorno dello stesso colore, con angoli arrotondati, smussa gli spigoli del dado. */
+.body {
+    stroke-width: 6;
+    stroke-linejoin: round;
+}
+
+/* Faccia frontale e spigoli: chiari e trasparenti, danno l'idea del volume. */
+.face {
+    fill: #fff;
+    fill-opacity: 0.14;
+}
+
+.facet {
+    fill: none;
+    stroke: #fff;
+    stroke-opacity: 0.35;
+    stroke-width: 2;
+    stroke-linejoin: round;
+}
+
+.number {
+    fill: var(--on-color);
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    text-anchor: middle;
+    dominant-baseline: central;
+}
+
+.pip {
+    fill: var(--on-color);
+}

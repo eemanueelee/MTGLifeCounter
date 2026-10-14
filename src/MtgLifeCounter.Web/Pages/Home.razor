@@ -1,0 +1,38 @@
+@page "/"
+@inject GameSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>MTG Counter</PageTitle>
+
+<div class="home">
+    <header class="brand">
+        @* Logo dell'associazione: visibile solo nel tema Ludipop (vedi Home.razor.css). *@
+        <img class="logo" src="images/ludipop-logo.svg" alt="LudiPop" />
+        <h1><span class="title-a">MTG</span> <span class="title-b">Life Counter</span></h1>
+    </header>
+
+    <div class="menu">
+        @if (Session.Current is { } game)
+        {
+            <button class="btn btn-primary" @onclick="Resume">
+                <span>Riprendi partita</span>
+                <small>@Summary(game)</small>
+            </button>
+            <button class="btn btn-secondary" @onclick="NewGame">Nuova partita</button>
+        }
+        else
+        {
+            <button class="btn btn-primary" @onclick="NewGame">Nuova partita</button>
+        }
+    </div>
+</div>
+
+@code {
+    private static string Summary(Game game) =>
+        string.Join(" · ", game.Players.Select(p => $"{p.Name} {Format.Number(p.Life)}"));
+
+    private void Resume() => Navigation.NavigateTo("game");
+
+    // La partita in corso viene sostituita solo premendo "Inizia" nella configurazione.
+    private void NewGame() => Navigation.NavigateTo("new");
+}

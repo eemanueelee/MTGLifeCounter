@@ -1,0 +1,372 @@
+.panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100cqw;
+    height: 100cqh;
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg));
+    overflow: hidden;
+    container-type: size;
+    /* Fondo intorno alla card: quello del tema, eventualmente tinto del colore del giocatore. */
+    background: color-mix(in oklab, var(--seat-color) var(--panel-tint), var(--panel-base));
+    color: var(--seat-color);
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    touch-action: none;
+}
+
+/* Ruotato di 90°: le dimensioni si scambiano, così dopo la rotazione riempie la cella. */
+.panel.sideways {
+    width: 100cqh;
+    height: 100cqw;
+}
+
+/*
+    La "card" del giocatore: contorno del suo colore, rientrato dal bordo, con il fondo
+    del tema (bianco rialzato in Ludipop, trasparente in Arcade). Tra una card e l'altra
+    si vede il fondo della pagina.
+*/
+.panel::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: var(--border-width) solid var(--seat-color);
+    border-radius: var(--radius);
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    pointer-events: none;
+}
+
+/* ---------- Aree di tocco ±1 (tenendo premuto ±10) ---------- */
+
+.zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    display: flex;
+    align-items: center;
+    padding: 0 7cqw;
+    border: none;
+    background: transparent;
+    touch-action: none;
+    /* Niente menu o anteprima del sistema durante la pressione lunga. */
+    -webkit-touch-callout: none;
+    transition: background-color 0.12s;
+}
+
+.zone-minus {
+    left: 0;
+    justify-content: flex-start;
+}
+
+.zone-plus {
+    right: 0;
+    justify-content: flex-end;
+}
+
+.zone:active {
+    background: color-mix(in oklab, var(--seat-color) 14%, transparent);
+}
+
+.zone-sign {
+    font-size: min(16cqh, 12cqw);
+    opacity: 0.45;
+}
+
+/* ---------- Danno da comandante sul tavolo ---------- */
+
+/* Pannello di chi sta segnando il danno ricevuto: contorno più spesso. */
+.panel.commander-target::before {
+    border-width: 4px;
+}
+
+/* Pannelli degli avversari: mostrano il danno inflitto, su un fondo più colorato. */
+.panel.commander-source::before {
+    border-style: dashed;
+    background: color-mix(in oklab, var(--seat-color) 14%, var(--card-bg));
+}
+
+.life.lethal {
+    color: var(--danger);
+}
+
+/* Etichetta ⚔ sopra il danno inflitto: solo indicativa, i tocchi passano alle aree ±1. */
+.badge.commander-label {
+    pointer-events: none;
+    border-style: dashed;
+}
+
+.badge.done {
+    padding: 0 1.1rem;
+    border-color: var(--seat-color);
+    background: var(--seat-color);
+    color: var(--on-color);
+}
+
+/* ---------- Pulsanti sopra il numero e punti vita ---------- */
+
+.info {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2cqh;
+    /* Lascia passare i tocchi alle aree ±1 sottostanti... */
+    pointer-events: none;
+}
+
+.badges {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    max-width: 88cqw;
+}
+
+.badge {
+    /* ...tranne che sui pulsanti, che aprono le finestre. */
+    pointer-events: auto;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    padding: 0 0.7rem;
+    border: var(--border-width) solid var(--seat-color);
+    border-radius: 999px;
+    background: var(--chip-bg);
+    color: var(--seat-color);
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    font-size: clamp(0.85rem, 6cqh, 1.15rem);
+    white-space: nowrap;
+}
+
+.badge:active {
+    background: var(--seat-color);
+    color: var(--on-color);
+}
+
+/* Nessun valore da mostrare: pulsante in secondo piano. */
+.badge.empty {
+    border-color: var(--line);
+    color: var(--text-muted);
+}
+
+.badge.lethal {
+    border-color: var(--danger);
+    background: var(--danger);
+    color: var(--on-color);
+}
+
+.counter-value + .counter-value {
+    margin-left: 0.35rem;
+}
+
+.symbol {
+    font-family: var(--font-body);
+}
+
+.counter-value .symbol {
+    margin-right: 0.15rem;
+}
+
+.life-wrap {
+    position: relative;
+}
+
+.life {
+    display: block;
+    /* Bungee è largo: un po' più piccolo del solito per far stare anche "−12" o "100". */
+    font-size: min(44cqh, 28cqw);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Vita a zero o meno: contorno tratteggiato e numero rosso, come un "game over". */
+.panel.out {
+    background: var(--panel-base);
+}
+
+.panel.out::before {
+    border-style: dashed;
+    opacity: 0.6;
+}
+
+.out .life {
+    color: var(--negative);
+}
+
+/*
+    Ludipop: il giocatore eliminato mostra il coniglietto-teschio al posto del numero,
+    con la vita in piccolo sotto (se torna sopra zero, il teschio sparisce).
+*/
+.skull {
+    display: none;
+}
+
+[data-theme="ludipop"] .life-wrap.dead {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+[data-theme="ludipop"] .dead .skull {
+    display: block;
+    height: min(46cqh, 30cqw);
+    aspect-ratio: 100 / 124;
+    color: var(--negative);
+    animation: skull-in 0.6s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+[data-theme="ludipop"] .dead .life {
+    font-size: min(9cqh, 7cqw);
+    margin-top: 0.5cqh;
+}
+
+@keyframes skull-in {
+    from {
+        transform: scale(0.3) rotate(-25deg);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+    }
+}
+
+.pending {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    margin-left: 0.3em;
+    padding: 0.15em 0.5em;
+    border-radius: 999px;
+    font-size: min(8cqh, 6cqw);
+    white-space: nowrap;
+    background: var(--chip-bg);
+    border: 1px solid currentColor;
+}
+
+.pending.neg {
+    color: var(--negative);
+}
+
+.pending.pos {
+    color: var(--positive);
+}
+
+/* ---------- Estrazione di chi inizia ---------- */
+
+.panel {
+    transition: filter 0.15s ease-out, background-color 0.15s ease-out;
+}
+
+.panel.reveal-dim {
+    filter: var(--dim-filter);
+}
+
+.panel.reveal-lit,
+.panel.reveal-winner {
+    background: color-mix(in oklab, var(--seat-color) 28%, var(--panel-base));
+}
+
+/* I bagliori si scalano con --glow: pieni nell'Arcade, più morbidi nei temi chiari. */
+.panel.reveal-lit::before,
+.panel.reveal-winner::before {
+    border-width: 4px;
+    box-shadow:
+        0 0 calc(22px * var(--glow)) var(--seat-color),
+        inset 0 0 calc(22px * var(--glow)) var(--seat-color);
+}
+
+.panel.reveal-winner::before {
+    animation: winner-glow 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes winner-glow {
+    from {
+        box-shadow:
+            0 0 calc(10px * var(--glow)) var(--seat-color),
+            inset 0 0 calc(10px * var(--glow)) var(--seat-color);
+    }
+    to {
+        box-shadow:
+            0 0 calc(44px * var(--glow)) var(--seat-color),
+            inset 0 0 calc(44px * var(--glow)) var(--seat-color);
+    }
+}
+
+.reveal-banner {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in oklab, var(--panel-base) 85%, transparent);
+    pointer-events: none;
+}
+
+.reveal-banner span {
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    /* 12cqw tiene "INIZI TU!" dentro la larghezza del pannello anche con Bungee, che è largo. */
+    font-size: min(22cqh, 12cqw);
+    white-space: nowrap;
+    color: var(--seat-color);
+    text-shadow: 0 0 calc(18px * var(--glow)) var(--seat-color);
+    animation: banner-pop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+@keyframes banner-pop {
+    from {
+        transform: scale(0.2) rotate(-8deg);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+    }
+}
+
+/*
+    Ludipop (tema chiaro): un bagliore su fondo chiaro si vede poco, quindi il pannello
+    acceso e quello estratto si riempiono del colore pieno del giocatore, con testo chiaro.
+*/
+[data-theme="ludipop"] .panel.reveal-lit,
+[data-theme="ludipop"] .panel.reveal-winner {
+    background: var(--panel-base);
+    color: var(--on-color);
+}
+
+/* Il riempimento segue il contorno rientrato e arrotondato, come la forma del pannello. */
+[data-theme="ludipop"] .panel.reveal-lit::before,
+[data-theme="ludipop"] .panel.reveal-winner::before {
+    background: var(--seat-color);
+}
+
+[data-theme="ludipop"] .reveal-banner {
+    inset: 4px;
+    border-radius: var(--radius);
+    background: var(--seat-color);
+}
+
+[data-theme="ludipop"] .reveal-banner span {
+    color: var(--on-color);
+    text-shadow: none;
+}
+
+/* Chi ha chiesto meno animazioni vede comunque il risultato, ma senza movimento. */
+@media (prefers-reduced-motion: reduce) {
+    .panel.reveal-winner::before,
+    .reveal-banner span,
+    .skull {
+        animation: none !important;
+    }
+}

@@ -1,0 +1,47 @@
+.clock {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    min-width: 5.5rem;
+    min-height: var(--tap-min);
+    padding: 0 0.6rem;
+    border: var(--border-width) solid transparent;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.clock:active {
+    border-color: var(--line);
+}
+
+/* In pausa: tempo spento e lampeggiante, per non dimenticarlo fermo. */
+.clock.paused {
+    border-color: var(--line);
+    color: var(--text-muted);
+}
+
+.clock.paused .time {
+    animation: paused-blink 1.2s steps(2, jump-none) infinite;
+}
+
+@keyframes paused-blink {
+    50% {
+        opacity: 0.35;
+    }
+}
+
+.symbol {
+    font-family: var(--font-body);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .clock.paused .time {
+        animation: none;
+    }
+}

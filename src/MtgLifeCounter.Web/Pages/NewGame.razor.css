@@ -1,0 +1,143 @@
+.setup {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    max-width: 30rem;
+    margin: 0 auto;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ---------- Intestazione ---------- */
+
+header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0;
+}
+
+.back {
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    border: none;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--accent-2);
+    font-size: 1.5rem;
+}
+
+.back:active {
+    background: var(--surface);
+}
+
+h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    font-size: 1.3rem;
+    color: var(--accent-2);
+}
+
+/* ---------- Contenuto ---------- */
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    padding: 1.25rem 1rem;
+}
+
+h2 {
+    margin: 0 0 0.6rem;
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.segmented {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border: var(--border-width) solid var(--line);
+    border-radius: var(--radius);
+}
+
+.segment {
+    flex: 1;
+    min-height: var(--tap-min);
+    border: none;
+    border-radius: calc(var(--radius) - 5px);
+    background: transparent;
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    transition: background-color 0.12s, color 0.12s;
+}
+
+.segment.selected {
+    background: var(--accent-2);
+    color: var(--on-color);
+}
+
+/* ---------- Giocatori ---------- */
+
+.players {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.player-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 0.75rem;
+    min-height: 3.25rem;
+    border: var(--border-width) solid var(--seat-color);
+    border-radius: var(--radius);
+    background: color-mix(in oklab, var(--seat-color) var(--panel-tint), var(--panel-base));
+}
+
+.player-row:focus-within {
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--seat-color);
+}
+
+.player-row input {
+    flex: 1;
+    min-width: 0;
+    min-height: var(--tap-min);
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 1.1rem;
+    outline: none;
+}
+
+.player-row input::placeholder {
+    color: var(--text-muted);
+}
+
+.seat-hint {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    color: var(--seat-color);
+    opacity: 0.85;
+}
+
+/* ---------- Pulsante finale ---------- */
+
+footer {
+    padding: 0.75rem 1rem 1rem;
+}
+
+.start {
+    width: 100%;
+    min-height: 3.5rem;
+    font-size: 1.15rem;
+}

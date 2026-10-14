@@ -1,0 +1,19 @@
+<div class="overlay" @onclick="OnCancel">
+    <div class="dialog" role="alertdialog" aria-labelledby="confirm-title" @onclick:stopPropagation>
+        <h2 id="confirm-title">@Title</h2>
+        <p>@Message</p>
+        <div class="actions">
+            <button class="btn btn-secondary" @onclick="OnCancel">@CancelText</button>
+            <button class="btn btn-danger" @onclick="OnConfirm">@ConfirmText</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public string ConfirmText { get; set; } = "Conferma";
+    [Parameter] public string CancelText { get; set; } = "Annulla";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}

@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MtgLifeCounter.Core/MtgLifeCounter.Core.csproj" />
+    <Project Path="src/MtgLifeCounter.Web/MtgLifeCounter.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MtgLifeCounter.Core.Tests/MtgLifeCounter.Core.Tests.csproj" />
+  </Folder>
+</Solution>

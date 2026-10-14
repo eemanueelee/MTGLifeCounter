@@ -1,0 +1,56 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    overflow: hidden;
+    background: var(--overlay);
+}
+
+.dialog {
+    width: min(100%, 22rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 1.25rem;
+    border: var(--border-width) solid var(--seat-color);
+    border-radius: var(--radius);
+    background: var(--dialog-bg);
+    transform: rotate(var(--rotation, 0deg));
+}
+
+/* Ruotata di 90° con più righe: la sua larghezza corre lungo l'altezza dello schermo. */
+.dialog.landscape {
+    flex-shrink: 0;
+    width: min(calc(100dvh - 2rem), 36rem);
+    gap: 0.6rem;
+    padding: 1rem;
+}
+
+h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    font-size: 1.05rem;
+    color: var(--seat-color);
+}
+
+.subtitle {
+    margin: 0.2rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.landscape .rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}

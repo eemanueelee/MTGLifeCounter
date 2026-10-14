@@ -1,0 +1,46 @@
+@implements IDisposable
+
+@*
+    Durata della partita. Un tocco mette in pausa o fa ripartire il cronometro.
+    Si aggiorna da solo ogni secondo, senza ridisegnare il resto della pagina.
+*@
+
+<button class="clock @(Game.IsClockRunning ? "" : "paused")" @onclick="Game.ToggleClock"
+        aria-label="@($"Durata partita {Format.Duration(Game.Elapsed)}, {(Game.IsClockRunning ? "tocca per mettere in pausa" : "in pausa, tocca per riprendere")}")">
+    @if (!Game.IsClockRunning)
+    {
+        <span class="symbol" aria-hidden="true">⏸&#xFE0E;</span>
+    }
+    <span class="time">@Format.Duration(Game.Elapsed)</span>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public Game Game { get; set; } = null!;
+
+    private readonly CancellationTokenSource _stop = new();
+
+    protected override void OnInitialized() => _ = TickAsync();
+
+    private async Task TickAsync()
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            while (await timer.WaitForNextTickAsync(_stop.Token))
+            {
+                if (Game.IsClockRunning)
+                    await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Pagina chiusa.
+        }
+    }
+
+    public void Dispose()
+    {
+        _stop.Cancel();
+        _stop.Dispose();
+    }
+}

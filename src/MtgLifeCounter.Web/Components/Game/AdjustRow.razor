@@ -1,0 +1,27 @@
+@* Riga "etichetta  −  valore  +" per modificare un valore di uno alla volta. *@
+
+<div class="row seat-@(Seat % 6) @(Lethal ? "lethal" : "")">
+    <span class="label">
+        @if (Icon is not null)
+        {
+            <span class="icon" aria-hidden="true">@Icon</span>
+        }
+        @Label
+    </span>
+    <button class="adjust" aria-label="@($"{Label}: meno 1")" @onclick="() => OnAdjust.InvokeAsync(-1)">−</button>
+    <span class="value" aria-live="polite">@Value</span>
+    <button class="adjust" aria-label="@($"{Label}: più 1")" @onclick="() => OnAdjust.InvokeAsync(+1)">+</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public int Value { get; set; }
+    [Parameter] public int Seat { get; set; }
+
+    /// <summary>Valore letale raggiunto: la riga viene evidenziata.</summary>
+    [Parameter] public bool Lethal { get; set; }
+
+    /// <summary>Riceve la variazione richiesta: -1 oppure +1.</summary>
+    [Parameter] public EventCallback<int> OnAdjust { get; set; }
+}

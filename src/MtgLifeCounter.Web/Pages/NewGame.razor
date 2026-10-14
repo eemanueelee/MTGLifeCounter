@@ -1,0 +1,135 @@
+@page "/new"
+@inject GameSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>Nuova partita · MTG Counter</PageTitle>
+
+<div class="setup">
+    <header>
+        <button class="back" @onclick="Back" aria-label="Indietro">←</button>
+        <h1>Nuova partita</h1>
+    </header>
+
+    <div class="content">
+        <section>
+            <h2 id="format-label">Modalità</h2>
+            <div class="segmented" role="radiogroup" aria-labelledby="format-label">
+                @foreach (var format in Enum.GetValues<GameFormat>())
+                {
+                    <button role="radio" aria-checked="@(format == _format ? "true" : "false")"
+                            class="segment @(format == _format ? "selected" : "")"
+                            @onclick="() => SelectFormat(format)">
+                        @format
+                    </button>
+                }
+            </div>
+        </section>
+
+        <section>
+            <h2 id="count-label">Giocatori</h2>
+            <div class="segmented" role="radiogroup" aria-labelledby="count-label">
+                @for (var count = GameSettings.MinPlayers; count <= GameSettings.MaxPlayers; count++)
+                {
+                    var value = count;
+                    <button role="radio" aria-checked="@(value == _playerCount ? "true" : "false")"
+                            class="segment @(value == _playerCount ? "selected" : "")"
+                            @onclick="() => _playerCount = value">
+                        @value
+                    </button>
+                }
+            </div>
+        </section>
+
+        <section>
+            <h2 id="life-label">Punti vita</h2>
+            <div class="segmented" role="radiogroup" aria-labelledby="life-label">
+                @foreach (var life in LifePresets)
+                {
+                    <button role="radio" aria-checked="@(life == _life ? "true" : "false")"
+                            class="segment @(life == _life ? "selected" : "")"
+                            @onclick="() => _life = life">
+                        @life
+                    </button>
+                }
+            </div>
+        </section>
+
+        <section>
+            <h2>Nomi</h2>
+            <div class="players">
+                @for (var i = 0; i < _playerCount; i++)
+                {
+                    var seat = i;
+                    <label class="player-row seat-@seat">
+                        <input @bind="_names[seat]" @bind:event="oninput"
+                               placeholder="@($"Player {seat + 1}")" maxlength="@Player.MaxNameLength"
+                               aria-label="@($"Nome giocatore {seat + 1}")" enterkeyhint="done" />
+                        <span class="seat-hint">@Layout.Seats[seat].Position</span>
+                    </label>
+                }
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <button class="btn btn-primary start" @onclick="Start">Inizia</button>
+    </footer>
+</div>
+
+@code {
+    private static readonly int[] LifePresets = [20, 25, 30, 40];
+
+    private GameFormat _format = GameFormat.Standard;
+    private int _playerCount = DefaultPlayerCount(GameFormat.Standard);
+    private int _life = DefaultLife(GameFormat.Standard);
+
+    // Sempre dimensionato per il massimo: se si riduce e poi si aumenta il numero, i nomi restano.
+    private readonly string[] _names = new string[GameSettings.MaxPlayers];
+
+    private TableLayout Layout => TableLayout.For(_playerCount);
+
+    protected override void OnInitialized()
+    {
+        // Riparte dall'ultima partita: per la rivincita basta premere "Inizia".
+        if (Session.Current is not { } last)
+            return;
+
+        _format = last.Settings.Format;
+        _playerCount = last.Settings.PlayerCount;
+        _life = last.Settings.StartingLife;
+
+        foreach (var player in last.Players)
+            _names[player.Id.Value - 1] = player.HasDefaultName ? "" : player.Name;
+    }
+
+    private static int DefaultLife(GameFormat format) => format switch
+    {
+        GameFormat.Commander => 40,
+        _ => 20,
+    };
+
+    private static int DefaultPlayerCount(GameFormat format) => format switch
+    {
+        GameFormat.Commander => 4,
+        _ => 2,
+    };
+
+    private void SelectFormat(GameFormat format)
+    {
+        if (format == _format)
+            return;
+
+        _format = format;
+        _playerCount = DefaultPlayerCount(format);
+        _life = DefaultLife(format);
+    }
+
+    private void Start()
+    {
+        Session.StartNew(new GameSettings(_format, _playerCount, _life), _names.Take(_playerCount));
+        // Sostituisce questa pagina nella cronologia: "indietro" dalla partita torna alla Home.
+        Navigation.NavigateTo("game", replace: true);
+    }
+
+    private void Back() => Navigation.NavigateTo("");
+}

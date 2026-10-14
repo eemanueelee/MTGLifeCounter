@@ -1,0 +1,24 @@
+@* Segnalini di un giocatore (quelli elencati in PlayerCounters). *@
+
+<GameDialog Title="@Title" Subtitle="@Target.Name"
+            Seat="Target.Id.Value - 1" Rotation="Rotation" RowCount="PlayerCounters.Visible.Count" OnClose="OnClose">
+    @foreach (var counter in PlayerCounters.Visible)
+    {
+        var info = counter;
+        var value = Target[info.Kind];
+        <AdjustRow Label="@info.Label" Icon="@info.Icon" Value="value" Seat="Target.Id.Value - 1"
+                   Lethal="info.IsLethal(value)"
+                   OnAdjust="delta => Game.AdjustCounter(Target.Id, info.Kind, delta)" />
+    }
+</GameDialog>
+
+@code {
+    [Parameter, EditorRequired] public Game Game { get; set; } = null!;
+    [Parameter, EditorRequired] public Player Target { get; set; } = null!;
+    [Parameter] public int Rotation { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    // Con un solo segnalino visibile la finestra prende il suo nome (es. "Veleno").
+    private static string Title =>
+        PlayerCounters.Visible.Count == 1 ? PlayerCounters.Visible[0].Label : "Segnalini";
+}

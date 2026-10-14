@@ -1,0 +1,98 @@
+.game {
+    position: relative;
+    height: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Le righe dipendono dal numero di giocatori: vedi TableLayout.
+       Lo spazio tra i giocatori lo danno i contorni rientrati dei pannelli. */
+    gap: 0;
+    background: var(--bg);
+    /* Durante la partita niente zoom, scroll o altri gesti del browser. */
+    touch-action: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Strato trasparente sopra la partita durante l'estrazione di chi inizia: raccoglie i tocchi. */
+.reveal-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    cursor: pointer;
+}
+
+/* Cella della griglia: il pannello al suo interno si dimensiona e ruota rispetto a questa. */
+.seat-cell {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    container-type: size;
+}
+
+/* Barra centrale: menu e reset a sinistra, durata al centro, dadi e Undo a destra. */
+.toolbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    padding: 0.35rem 0.5rem;
+    background: var(--bg);
+}
+
+.tool-group {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.tool {
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    padding: 0 0.6rem;
+    border: var(--border-width) solid var(--line);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--accent-2);
+    font-size: 1.4rem;
+}
+
+.tool:active:not(:disabled) {
+    background: var(--accent-2);
+    border-color: var(--accent-2);
+    color: var(--on-color);
+}
+
+.tool:disabled {
+    color: var(--text-muted);
+    opacity: 0.4;
+    cursor: default;
+}
+
+.tool-symbol {
+    font-family: var(--font-body);
+}
+
+.tool-main {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.tool-main:not(:disabled) {
+    border-color: var(--accent-2);
+}
+
+.tool-label {
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    font-size: 0.95rem;
+}
+
+/* Telefoni molto stretti: Undo resta solo con la freccia, così la barra entra in una riga. */
+@media (max-width: 359px) {
+    .tool-label {
+        display: none;
+    }
+}

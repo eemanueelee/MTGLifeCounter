@@ -1,0 +1,131 @@
+@implements IDisposable
+
+@*
+    Dadi (d4…d100) e moneta, disegnati con la loro forma vera. Mentre il tiro "gira"
+    il dado rotola e la moneta si gira; poi si fermano sul risultato.
+    Gli ultimi tiri restano nell'elenco passato dalla pagina, anche chiudendo la finestra.
+    Si chiude toccando fuori.
+*@
+
+<div class="overlay" @onclick="OnClose">
+    <div class="dialog" role="dialog" aria-label="Dadi e moneta" @onclick:stopPropagation>
+        <h2>Dadi e moneta</h2>
+
+        <div class="result @(_rolling ? "rolling" : "")" aria-live="polite">
+            @if (_shown is null)
+            {
+                <span class="idle" aria-hidden="true">?</span>
+            }
+            else
+            {
+                @* La chiave cambia a ogni risultato finale, così l'animazione di arrivo riparte. *@
+                <div class="graphic @(_shown.IsCoin ? "coin" : "") @(_shown.Sides == 100 ? "wide" : "")" @key="_landedCount">
+                    @if (_shown.Face is { } face)
+                    {
+                        <CoinGraphic Face="face" />
+                    }
+                    else
+                    {
+                        <DiceGraphic Sides="_shown.Sides" Value="_shown.Value" />
+                    }
+                </div>
+                <span class="caption">@Caption(_shown)</span>
+            }
+        </div>
+
+        <div class="choices">
+            @foreach (var sides in Dice.StandardSides)
+            {
+                var value = sides;
+                <button class="choice @(_shown is { IsCoin: false } shown && shown.Sides == value ? "selected" : "")" @onclick="() => RollDie(value)">
+                    d@(value)
+                </button>
+            }
+            <button class="choice @(_shown?.IsCoin == true ? "selected" : "")" @onclick="FlipCoin">Moneta</button>
+        </div>
+
+        @if (History.Count > 0)
+        {
+            <ol class="history" aria-label="Ultimi tiri">
+                @foreach (var roll in History)
+                {
+                    <li><span class="history-label">@roll.Label</span> @roll.Text</li>
+                }
+            </ol>
+        }
+    </div>
+</div>
+
+@code {
+    private const int MaxHistory = 6;
+
+    // Il tiro "gira" per qualche fotogramma, rallentando, prima di mostrare il risultato.
+    private const int ShuffleSteps = 9;
+    private const int ShuffleStartMs = 35;
+    private const int ShuffleSlowdownMs = 12;
+
+    /// <summary>Ultimi tiri, il più recente per primo. Lo conserva la pagina di gioco.</summary>
+    [Parameter, EditorRequired] public List<DiceRoll> History { get; set; } = null!;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private readonly CancellationTokenSource _closing = new();
+    private DiceRoll? _shown;
+    private bool _rolling;
+    private int _run;
+    private int _landedCount;
+
+    // Riaprendo la finestra si rivede l'ultimo tiro, che spesso è proprio quello da ricontrollare.
+    protected override void OnInitialized() => _shown = History.FirstOrDefault();
+
+    /// <summary>Didascalia sotto la figura: il nome della faccia per la moneta, il totale per il d100.</summary>
+    private static string Caption(DiceRoll roll) => roll switch
+    {
+        { IsCoin: true } => roll.Text,
+        { Sides: 100 } => $"d100 · {roll.Value}",
+        _ => roll.Label,
+    };
+
+    private Task RollDie(int sides) =>
+        RollAsync(() => DiceRoll.Die(sides, Dice.Roll(Random.Shared, sides)));
+
+    private Task FlipCoin() =>
+        RollAsync(() => DiceRoll.Coin(Dice.Flip(Random.Shared)));
+
+    private async Task RollAsync(Func<DiceRoll> roll)
+    {
+        // Un nuovo tiro mentre il precedente gira lo sostituisce.
+        var run = ++_run;
+        _rolling = true;
+
+        try
+        {
+            for (var step = 0; step < ShuffleSteps; step++)
+            {
+                _shown = roll();
+                StateHasChanged();
+                await Task.Delay(ShuffleStartMs + step * ShuffleSlowdownMs, _closing.Token);
+                if (run != _run)
+                    return;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        // Il risultato vero è un tiro a sé, non l'ultimo mostrato durante la rotazione.
+        _shown = roll();
+        _rolling = false;
+        _landedCount++;
+
+        History.Insert(0, _shown);
+        if (History.Count > MaxHistory)
+            History.RemoveAt(History.Count - 1);
+    }
+
+    public void Dispose()
+    {
+        _closing.Cancel();
+        _closing.Dispose();
+    }
+}

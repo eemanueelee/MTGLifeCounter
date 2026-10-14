@@ -1,0 +1,119 @@
+@*
+    Un dado disegnato con la sua forma reale: d4 triangolo, d6 cubo con i pallini, d8 rombo,
+    d10 "aquilone", d12 pentagono, d20 esagono, d100 come due d10 (decine e unità).
+    I colori vengono dal tema (sfumatura da --accent a --accent-2, segni in --on-color).
+*@
+
+<svg class="die" viewBox="@(Sides == 100 ? "0 0 204 100" : "0 0 100 100")" role="img" aria-label="@($"d{Sides}: {Value}")">
+    <defs>
+        <linearGradient id="@_gradientId" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" class="stop-start" />
+            <stop offset="1" class="stop-end" />
+        </linearGradient>
+    </defs>
+
+    @* Ogni forma sta in un <g>: dentro un blocco di codice Razor tratterebbe <text> come un suo tag. *@
+    @switch (Sides)
+    {
+        case 4:
+            <g>
+                <polygon class="body" style="@Fill" points="50,10 92,86 8,86" />
+                <text class="number" x="50" y="64" font-size="30">@Value</text>
+            </g>
+            break;
+
+        case 6:
+            <g>
+                <rect class="body" style="@Fill" x="9" y="9" width="82" height="82" rx="16" />
+                @foreach (var (x, y) in Pips(Value))
+                {
+                    <circle class="pip" cx="@x" cy="@y" r="8.5" />
+                }
+            </g>
+            break;
+
+        case 8:
+            <g>
+                <polygon class="body" style="@Fill" points="50,5 94,50 50,95 6,50" />
+                <polygon class="face" points="50,13 84,66 16,66" />
+                <text class="number" x="50" y="50" font-size="26">@Value</text>
+            </g>
+            break;
+
+        case 10:
+            @KiteFace(Value.ToString())
+            break;
+
+        case 12:
+            <g>
+                <polygon class="body" style="@Fill" points="50,6 93.7,37.8 77,89.2 23,89.2 6.3,37.8" />
+                <polygon class="facet" points="50,28 72.8,44.6 64.1,71.4 35.9,71.4 27.2,44.6" />
+                <path class="facet" d="M50 28V6M72.8 44.6L93.7 37.8M64.1 71.4L77 89.2M35.9 71.4L23 89.2M27.2 44.6L6.3 37.8" />
+                <text class="number" x="50" y="53" font-size="22">@Value</text>
+            </g>
+            break;
+
+        case 20:
+            <g>
+                <polygon class="body" style="@Fill" points="50,3 91.6,27 91.6,73 50,97 8.4,73 8.4,27" />
+                <polygon class="facet" points="50,24 77,70 23,70" />
+                <path class="facet" d="M50 24L50 3M50 24L8.4 27M50 24L91.6 27M77 70L91.6 27M77 70L91.6 73M77 70L50 97M23 70L8.4 27M23 70L8.4 73M23 70L50 97" />
+                <text class="number" x="50" y="56" font-size="21">@Value</text>
+            </g>
+            break;
+
+        case 100:
+            @* Percentuale: un d10 delle decine (00–90) e uno delle unità (0–9); 100 è "00" + "0". *@
+            @KiteFace(Tens)
+            <g transform="translate(104 0)">
+                @KiteFace(Units)
+            </g>
+            break;
+
+        default:
+            <g>
+                <circle class="body" style="@Fill" cx="50" cy="50" r="44" />
+                <text class="number" x="50" y="52" font-size="28">@Value</text>
+            </g>
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public int Sides { get; set; }
+    [Parameter, EditorRequired] public int Value { get; set; }
+
+    // Ogni dado disegnato ha la sua sfumatura: l'id deve essere unico nella pagina.
+    private readonly string _gradientId = $"die-gradient-{Guid.NewGuid():N}";
+
+    private string Fill => $"fill: url(#{_gradientId}); stroke: url(#{_gradientId});";
+
+    private string Tens => ((Value % 100) / 10 * 10).ToString("00");
+
+    private string Units => (Value % 10).ToString();
+
+    /// <summary>Faccia di un d10 ("aquilone") con il suo numero; il d100 ne usa due.</summary>
+    private RenderFragment KiteFace(string number) =>
+        @<g>
+            <polygon class="body" style="@Fill" points="50,5 94,45 50,95 6,45" />
+            <path class="facet" d="M6 45L50 61L94 45M50 61V95" />
+            <text class="number" x="50" y="40" font-size="@(number.Length > 1 ? 22 : 26)">@number</text>
+        </g>;
+
+    /// <summary>Posizione dei pallini del d6, come su un dado vero.</summary>
+    private static IEnumerable<(int X, int Y)> Pips(int value)
+    {
+        (int, int) topLeft = (29, 29), topRight = (71, 29), middleLeft = (29, 50), middleRight = (71, 50),
+            bottomLeft = (29, 71), bottomRight = (71, 71), center = (50, 50);
+
+        return value switch
+        {
+            1 => [center],
+            2 => [topLeft, bottomRight],
+            3 => [topLeft, center, bottomRight],
+            4 => [topLeft, topRight, bottomLeft, bottomRight],
+            5 => [topLeft, topRight, center, bottomLeft, bottomRight],
+            _ => [topLeft, topRight, middleLeft, middleRight, bottomLeft, bottomRight],
+        };
+    }
+}

@@ -1,0 +1,67 @@
+# Pubblica l'app su GitHub Pages a ogni push su main (o a mano dalla scheda Actions).
+name: Pubblica su GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una pubblicazione alla volta; quella in corso non viene interrotta.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test
+        run: dotnet test tests/MtgLifeCounter.Core.Tests --configuration Release
+
+      # Su GitHub Pages l'app sta in /nome-repository/ (tranne il sito utente nome.github.io).
+      # Il base href va cambiato prima della pubblicazione, così l'impronta di index.html
+      # nel manifest del service worker resta corretta.
+      - name: Imposta il base href
+        run: |
+          repo="${{ github.event.repository.name }}"
+          if [[ "$repo" == *.github.io ]]; then base="/"; else base="/$repo/"; fi
+          sed -i "s|<base href=\"/\" />|<base href=\"$base\" />|" src/MtgLifeCounter.Web/wwwroot/index.html
+          grep -q "<base href=\"$base\" />" src/MtgLifeCounter.Web/wwwroot/index.html
+
+      - name: Pubblica
+        run: dotnet publish src/MtgLifeCounter.Web --configuration Release --output release
+
+      # 404.html = index.html: aprendo direttamente un indirizzo come /game GitHub Pages
+      # restituisce la pagina dell'app invece del suo errore.
+      # .nojekyll: senza, GitHub Pages scarta la cartella _framework.
+      - name: Prepara per GitHub Pages
+        run: |
+          cp release/wwwroot/index.html release/wwwroot/404.html
+          touch release/wwwroot/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: release/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,41 @@
+@*
+    Moneta disegnata: Testa con il coniglietto LudiPop, Croce con una croce.
+    Colori dal tema, come i dadi (sfumatura da --accent a --accent-2).
+*@
+
+<svg class="coin" viewBox="0 0 100 100" role="img" aria-label="@(Face == CoinFace.Heads ? "Testa" : "Croce")">
+    <defs>
+        <linearGradient id="@_gradientId" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" class="stop-start" />
+            <stop offset="1" class="stop-end" />
+        </linearGradient>
+    </defs>
+
+    <circle cx="50" cy="50" r="47" style="fill: url(#@_gradientId)" />
+    <circle class="rim" cx="50" cy="50" r="40" />
+
+    @if (Face == CoinFace.Heads)
+    {
+        @* Coniglietto: orecchie, testa tonda, occhi e naso ritagliati (evenodd). *@
+        <ellipse class="mark" cx="41" cy="31" rx="6" ry="14" transform="rotate(-12 41 31)" />
+        <ellipse class="mark" cx="59" cy="31" rx="6" ry="14" transform="rotate(12 59 31)" />
+        <path class="mark" fill-rule="evenodd"
+              d="M32 58a18 18 0 1 0 36 0a18 18 0 1 0 -36 0Z
+                 M41 56a3 3 0 1 0 6 0a3 3 0 1 0 -6 0Z
+                 M53 56a3 3 0 1 0 6 0a3 3 0 1 0 -6 0Z
+                 M47.5 62h5l-2.5 3.5Z" />
+    }
+    else
+    {
+        @* Croce con i bracci arrotondati. *@
+        <rect class="mark" x="44" y="24" width="12" height="52" rx="4" />
+        <rect class="mark" x="24" y="44" width="52" height="12" rx="4" />
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public CoinFace Face { get; set; }
+
+    // Ogni moneta disegnata ha la sua sfumatura: l'id deve essere unico nella pagina.
+    private readonly string _gradientId = $"coin-gradient-{Guid.NewGuid():N}";
+}

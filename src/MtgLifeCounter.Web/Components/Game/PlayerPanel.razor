@@ -1,0 +1,264 @@
+@implements IDisposable
+
+@*
+    Pannello di un giocatore. Metà sinistra = -1, metà destra = +1: le aree di tocco
+    occupano tutto il pannello. Tenendo premuto si arriva a ±10, poi altri ±10 finché si tiene.
+    Si usa pointerdown invece di click: risponde subito e funziona anche quando
+    due giocatori toccano lo schermo nello stesso momento.
+
+    Danno da comandante "sul tavolo": quando un giocatore tocca ⚔, il suo pannello diventa
+    il bersaglio e quelli degli avversari mostrano il danno che ciascuno gli ha inflitto;
+    le loro aree ±1 modificano quel danno. Si indica chi ha colpito guardando dove siede.
+
+    Il pannello riempie la cella che lo contiene (che deve avere container-type: size)
+    ed è ruotato verso il giocatore; ruotato di 90° scambia larghezza e altezza.
+*@
+
+<section class="panel @SeatClass @(IsSideways ? "sideways" : "") @(IsOut ? "out" : "") @RevealClass @ModeClass"
+         style="--rotation: @(Rotation)deg" aria-label="@Player.Name">
+
+    @if (Mode != CommanderMode.Target)
+    {
+        <button class="zone zone-minus" aria-label="@($"{AdjustLabel}: meno 1, tieni premuto per meno 10")"
+                @onpointerdown="e => StartPress(e, -1)" @onpointerdown:preventDefault
+                @onpointerup="EndPress" @onpointercancel="EndPress" @onpointerleave="EndPress"
+                @oncontextmenu:preventDefault>
+            <span class="zone-sign" aria-hidden="true">−</span>
+        </button>
+        <button class="zone zone-plus" aria-label="@($"{AdjustLabel}: più 1, tieni premuto per più 10")"
+                @onpointerdown="e => StartPress(e, +1)" @onpointerdown:preventDefault
+                @onpointerup="EndPress" @onpointercancel="EndPress" @onpointerleave="EndPress"
+                @oncontextmenu:preventDefault>
+            <span class="zone-sign" aria-hidden="true">+</span>
+        </button>
+    }
+
+    <div class="info">
+        @switch (Mode)
+        {
+            case CommanderMode.Source:
+                @* Danno che questo giocatore ha inflitto al bersaglio. *@
+                <div class="badges">
+                    <span class="badge commander-label" aria-hidden="true">
+                        <span class="symbol">⚔&#xFE0E;</span>
+                    </span>
+                </div>
+                <div class="life-wrap">
+                    <span class="life @(DamageToTarget >= Player.LethalCommanderDamage ? "lethal" : "")" aria-live="polite">
+                        @DamageToTarget
+                    </span>
+                    @if (PendingDelta is int sourceDelta)
+                    {
+                        <span class="pending @(sourceDelta < 0 ? "pos" : "neg")">@Format.Delta(sourceDelta)</span>
+                    }
+                </div>
+                break;
+
+            case CommanderMode.Target:
+                @* Bersaglio: la vita scende mentre gli avversari segnano il danno. *@
+                <div class="badges">
+                    <button class="badge done" aria-label="Fine danno da comandante" @onclick="OnCommanderDamage">
+                        <span class="symbol" aria-hidden="true">⚔&#xFE0E;</span> Fine
+                    </button>
+                </div>
+                <div class="life-wrap">
+                    <span class="life" aria-live="polite">@Format.Number(Player.Life)</span>
+                </div>
+                break;
+
+            default:
+                @* Niente nome: il giocatore si riconosce dal colore e dal posto. *@
+                <div class="badges">
+                    @if (Game.Settings.Format == GameFormat.Commander)
+                    {
+                        @* Danno da comandante più alto ricevuto; il bordo ha il colore di chi l'ha inflitto. *@
+                        var highest = Player.HighestCommanderDamage;
+                        <button class="badge commander @(highest is { } h ? $"seat-{(h.Source.Value - 1) % 6}" : "empty") @(Player.HasLethalCommanderDamage ? "lethal" : "")"
+                                aria-label="@($"Danno da comandante di {Player.Name}: {highest?.Damage ?? 0}")"
+                                @onclick="OnCommanderDamage">
+                            <span class="symbol" aria-hidden="true">⚔&#xFE0E;</span>@(highest?.Damage ?? 0)
+                        </button>
+                    }
+
+                    @* Segnalini: mostra solo quelli diversi da zero; se non ce n'è nessuno, solo le icone. *@
+                    <button class="badge counters @(ActiveCounters.Count == 0 ? "empty" : "") @(Player.HasLethalPoison ? "lethal" : "")"
+                            aria-label="@($"Segnalini di {Player.Name}")" @onclick="OnCounters">
+                        @if (ActiveCounters.Count == 0)
+                        {
+                            @foreach (var counter in PlayerCounters.Visible)
+                            {
+                                <span class="symbol" aria-hidden="true">@counter.Icon</span>
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var counter in ActiveCounters)
+                            {
+                                <span class="counter-value"><span class="symbol" aria-hidden="true">@counter.Icon</span>@Player[counter.Kind]</span>
+                            }
+                        }
+                    </button>
+                </div>
+                <div class="life-wrap @(IsOut ? "dead" : "")">
+                    @if (IsOut)
+                    {
+                        @* Coniglietto-teschio al posto del numero (solo tema Ludipop, vedi CSS). *@
+                        <span class="skull"><SkullBunny /></span>
+                    }
+                    <span class="life" aria-live="polite">@Format.Number(Player.Life)</span>
+                    @if (PendingDelta is int delta)
+                    {
+                        <span class="pending @(delta < 0 ? "neg" : "pos")">@Format.Delta(delta)</span>
+                    }
+                </div>
+                break;
+        }
+    </div>
+
+    @if (Reveal == RevealState.Winner)
+    {
+        @* Scritto dentro il pannello, quindi già girato verso il giocatore che inizia. *@
+        <div class="reveal-banner" aria-hidden="true">
+            <span>Inizi tu!</span>
+        </div>
+    }
+</section>
+
+@code {
+    private enum CommanderMode
+    {
+        None,
+
+        /// <summary>Questo giocatore sta segnando il danno da comandante che ha ricevuto.</summary>
+        Target,
+
+        /// <summary>Un altro giocatore sta segnando il danno: questo pannello è un possibile responsabile.</summary>
+        Source,
+    }
+
+    private static readonly TimeSpan HoldDelay = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan RepeatInterval = TimeSpan.FromMilliseconds(600);
+    private const int HoldStep = 10;
+
+    private CancellationTokenSource? _hold;
+
+    [Parameter, EditorRequired] public Game Game { get; set; } = null!;
+    [Parameter, EditorRequired] public Player Player { get; set; } = null!;
+    [Parameter] public int Seat { get; set; }
+    [Parameter] public int Rotation { get; set; }
+
+    /// <summary>Tocco su ⚔ (o su "Fine"): attiva o chiude il danno da comandante di questo giocatore.</summary>
+    [Parameter] public EventCallback OnCommanderDamage { get; set; }
+
+    [Parameter] public EventCallback OnCounters { get; set; }
+
+    /// <summary>Il giocatore che sta segnando il danno da comandante ricevuto, se c'è.</summary>
+    [Parameter] public PlayerId? CommanderTarget { get; set; }
+
+    /// <summary>Aspetto durante l'estrazione di chi inizia.</summary>
+    [Parameter] public RevealState Reveal { get; set; }
+
+    private CommanderMode Mode => CommanderTarget switch
+    {
+        null => CommanderMode.None,
+        { } target when target == Player.Id => CommanderMode.Target,
+        _ => CommanderMode.Source,
+    };
+
+    private string ModeClass => Mode switch
+    {
+        CommanderMode.Target => "commander-target",
+        CommanderMode.Source => "commander-source",
+        _ => "",
+    };
+
+    private string RevealClass => Reveal switch
+    {
+        RevealState.Lit => "reveal-lit",
+        RevealState.Dim => "reveal-dim",
+        RevealState.Winner => "reveal-winner",
+        _ => "",
+    };
+
+    private string AdjustLabel => Mode == CommanderMode.Source
+        ? $"Danno da comandante di {Player.Name} a {Game.GetPlayer(CommanderTarget!.Value).Name}"
+        : Player.Name;
+
+    private int DamageToTarget => Game.GetPlayer(CommanderTarget!.Value).CommanderDamage(Player.Id);
+
+    private List<CounterInfo> ActiveCounters =>
+        PlayerCounters.Visible.Where(c => Player[c.Kind] != 0).ToList();
+
+    private string SeatClass => $"seat-{Seat % 6}";
+
+    private bool IsSideways => Rotation is 90 or 270;
+
+    // Evidenziato, non eliminato: alcune carte cambiano le regole, decidono i giocatori.
+    private bool IsOut => Mode != CommanderMode.Source
+        && (Player.Life <= 0 || Player.HasLethalCommanderDamage || Player.HasLethalPoison);
+
+    /// <summary>Variazione in corso da mostrare nel badge temporaneo: vita, oppure danno inflitto al bersaglio.</summary>
+    private int? PendingDelta => (Mode, Game.PendingChange) switch
+    {
+        (CommanderMode.Source, CommanderDamageChanged d) when d.Source == Player.Id && d.Target == CommanderTarget => d.Delta,
+        (CommanderMode.None, CounterChanged { Counter: CounterKind.Life } c) when c.Player == Player.Id => c.Delta,
+        _ => null,
+    };
+
+    private void StartPress(PointerEventArgs e, int direction)
+    {
+        // Solo tocco o tasto sinistro del mouse.
+        if (e.Button != 0)
+            return;
+
+        // Il ±1 arriva subito, senza aspettare di capire se è una pressione lunga.
+        CancelHold();
+        Adjust(direction);
+
+        _hold = new CancellationTokenSource();
+        _ = HoldAsync(direction, _hold.Token);
+    }
+
+    /// <summary>
+    /// Pressione lunga: completa il primo tocco fino a ±10, poi aggiunge ±10 a intervalli
+    /// finché il dito resta giù. Sono tocchi ravvicinati, quindi diventano un solo evento.
+    /// </summary>
+    private async Task HoldAsync(int direction, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(HoldDelay, token);
+            Adjust(direction * (HoldStep - 1));
+
+            while (true)
+            {
+                await Task.Delay(RepeatInterval, token);
+                Adjust(direction * HoldStep);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Dito sollevato: fine della pressione.
+        }
+    }
+
+    /// <summary>Le aree ±1 cambiano la vita, oppure il danno inflitto al bersaglio del comandante.</summary>
+    private void Adjust(int delta)
+    {
+        if (Mode == CommanderMode.Source)
+            Game.AdjustCommanderDamage(CommanderTarget!.Value, Player.Id, commander: 0, delta);
+        else
+            Game.AdjustCounter(Player.Id, CounterKind.Life, delta);
+    }
+
+    private void EndPress() => CancelHold();
+
+    private void CancelHold()
+    {
+        _hold?.Cancel();
+        _hold?.Dispose();
+        _hold = null;
+    }
+
+    public void Dispose() => CancelHold();
+}

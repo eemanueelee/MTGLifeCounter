@@ -1,0 +1,38 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: var(--overlay);
+}
+
+.dialog {
+    width: min(100%, 22rem);
+    padding: 1.5rem;
+    border: var(--border-width) solid var(--danger);
+    border-radius: var(--radius);
+    background: var(--dialog-bg);
+    text-align: center;
+}
+
+h2 {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    font-size: 1.1rem;
+    color: var(--danger);
+}
+
+p {
+    margin: 0 0 1.5rem;
+    color: var(--text-muted);
+}
+
+.actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}

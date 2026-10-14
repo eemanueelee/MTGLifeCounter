@@ -1,0 +1,27 @@
+@*
+    Il coniglietto LudiPop in versione teschio: orecchie lunghe, testa tonda con orbite vuote,
+    naso a triangolo e mandibola con i denti. Disegnato in currentColor, quindi prende il colore
+    del testo che lo contiene; i "buchi" (occhi, naso, denti) lasciano vedere lo sfondo.
+*@
+
+<svg class="skull-bunny" viewBox="0 0 100 124" role="img" aria-label="Eliminato" fill="currentColor">
+    @* Orecchie, con l'interno più chiaro. *@
+    <ellipse cx="33" cy="28" rx="10" ry="25" transform="rotate(-12 33 28)" />
+    <ellipse cx="67" cy="28" rx="10" ry="25" transform="rotate(12 67 28)" />
+    <ellipse cx="33" cy="30" rx="4.5" ry="16" transform="rotate(-12 33 28)" fill="#fff" fill-opacity="0.45" />
+    <ellipse cx="67" cy="30" rx="4.5" ry="16" transform="rotate(12 67 28)" fill="#fff" fill-opacity="0.45" />
+
+    @* Testa: cerchio con orbite e naso ritagliati (evenodd). *@
+    <path fill-rule="evenodd"
+          d="M16 72a34 34 0 1 0 68 0a34 34 0 1 0 -68 0Z
+             M27.5 70a9.5 11 0 1 0 19 0a9.5 11 0 1 0 -19 0Z
+             M53.5 70a9.5 11 0 1 0 19 0a9.5 11 0 1 0 -19 0Z
+             M46 85h8l-4 7Z" />
+
+    @* Mandibola con le fessure tra i denti. *@
+    <path fill-rule="evenodd"
+          d="M38 98h24a7 7 0 0 1 7 7v10a7 7 0 0 1 -7 7H38a7 7 0 0 1 -7 -7V105a7 7 0 0 1 7 -7Z
+             M40.2 107h2.6v11h-2.6Z
+             M48.7 107h2.6v11h-2.6Z
+             M57.2 107h2.6v11h-2.6Z" />
+</svg>

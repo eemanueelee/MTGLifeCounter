@@ -1,0 +1,207 @@
+@page "/game"
+@implements IAsyncDisposable
+@inject GameSession Session
+@inject ScreenWakeLock WakeLock
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>MTG Counter</PageTitle>
+
+@if (_game is not null)
+{
+    <div class="game" style="grid-template-rows: @_layout.GridTemplateRows">
+        @for (var i = 0; i < _game.Players.Count; i++)
+        {
+            var player = _game.Players[i];
+            var seat = _layout.Seats[i];
+            <div class="seat-cell" style="grid-area: @seat.GridArea">
+                <PlayerPanel Game="_game" Player="player" Seat="i" Rotation="seat.Rotation"
+                             Reveal="_roulette.StateOf(i)"
+                             CommanderTarget="_commanderTarget"
+                             OnCommanderDamage="() => ToggleCommanderDamage(player)"
+                             OnCounters="() => OpenCounters(player, seat.Rotation)" />
+            </div>
+        }
+
+        <nav class="toolbar" style="grid-row: @_layout.ToolbarRow" aria-label="Comandi partita">
+            <div class="tool-group">
+                <button class="tool" @onclick="GoHome" aria-label="Menu">☰</button>
+                <button class="tool" @onclick="() => _confirmReset = true" aria-label="Ricomincia partita">⟲</button>
+            </div>
+
+            <GameClockButton Game="_game" />
+
+            <div class="tool-group">
+                <button class="tool" @onclick="() => _diceOpen = true" aria-label="Dadi e moneta">
+                    <span class="tool-symbol" aria-hidden="true">⚄&#xFE0E;</span>
+                </button>
+                <button class="tool tool-main" @onclick="Undo" disabled="@(!_game.CanUndo)" aria-label="Annulla ultima modifica">
+                    ↶ <span class="tool-label">Undo</span>
+                </button>
+            </div>
+        </nav>
+
+        @if (_roulette.IsRunning)
+        {
+            @* Durante l'estrazione i pannelli non si toccano: un tocco salta l'animazione o la chiude. *@
+            <div class="reveal-overlay" @onclick="_roulette.Skip">
+                <p class="sr-only" aria-live="polite">
+                    @(_roulette.HasLanded ? $"Inizia {StartingPlayerName}" : "Estrazione di chi inizia")
+                </p>
+            </div>
+        }
+    </div>
+
+    @if (_countersTarget is not null)
+    {
+        <CountersDialog Game="_game" Target="_countersTarget" Rotation="_countersRotation" OnClose="CloseCounters" />
+    }
+
+    @if (_diceOpen)
+    {
+        <DiceDialog History="_diceHistory" OnClose="() => _diceOpen = false" />
+    }
+
+    @if (_confirmReset)
+    {
+        <ConfirmDialog Title="Ricominciare la partita?"
+                       Message="Tutti i punti vita e i valori verranno ripristinati."
+                       ConfirmText="Reset"
+                       OnConfirm="Reset"
+                       OnCancel="() => _confirmReset = false" />
+    }
+}
+
+@code {
+    private Game? _game;
+    private TableLayout _layout = null!;
+    // Giocatore che sta segnando il danno da comandante ricevuto: gli altri pannelli mostrano il danno inflitto.
+    private PlayerId? _commanderTarget;
+    private Player? _countersTarget;
+    private int _countersRotation;
+    private bool _confirmReset;
+    private bool _diceOpen;
+    private readonly List<DiceRoll> _diceHistory = [];
+    private CancellationTokenSource? _pendingRefresh;
+    private readonly StartingPlayerRoulette _roulette = new();
+
+    private string? StartingPlayerName =>
+        _game?.StartingPlayer is { } id ? _game.GetPlayer(id).Name : null;
+
+    protected override void OnInitialized()
+    {
+        _game = Session.Current;
+        if (_game is null)
+        {
+            // Nessuna partita (es. pagina aperta direttamente): si torna all'inizio.
+            Navigation.NavigateTo("", replace: true);
+            return;
+        }
+
+        _layout = TableLayout.For(_game.Players.Count);
+        _game.Changed += OnGameChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _game is null)
+            return;
+
+        if (Session.StartingPlayerRevealPending)
+            StartRoulette();
+
+        await WakeLock.EnableAsync();
+    }
+
+    private void StartRoulette()
+    {
+        if (_game?.StartingPlayer is not { } startingPlayer)
+            return;
+
+        Session.MarkStartingPlayerRevealed();
+        _ = _roulette.RunAsync(
+            _game.Players.Count,
+            winnerSeat: startingPlayer.Value - 1,
+            render: () => InvokeAsync(StateHasChanged),
+            onLanded: VibrateAsync);
+    }
+
+    /// <summary>Breve vibrazione quando la roulette si ferma (solo dove il browser la supporta).</summary>
+    private async Task VibrateAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.vibrate", 80);
+        }
+        catch (JSException)
+        {
+            // Nessuna vibrazione su questo dispositivo: non importa.
+        }
+    }
+
+    private void OnGameChanged()
+    {
+        StateHasChanged();
+        ScheduleRefreshAfterGrouping();
+    }
+
+    /// <summary>
+    /// Il badge "−5" sparisce quando scade la finestra di raggruppamento:
+    /// serve un nuovo render in quel momento anche se nessuno tocca lo schermo.
+    /// </summary>
+    private void ScheduleRefreshAfterGrouping()
+    {
+        _pendingRefresh?.Cancel();
+        _pendingRefresh = new CancellationTokenSource();
+        _ = RefreshAfterAsync(Game.GroupingWindow + TimeSpan.FromMilliseconds(50), _pendingRefresh.Token);
+    }
+
+    private async Task RefreshAfterAsync(TimeSpan delay, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(delay, token);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException)
+        {
+            // Un tocco più recente ha riprogrammato il refresh.
+        }
+    }
+
+    private void Undo() => _game?.Undo();
+
+    private void Reset()
+    {
+        _confirmReset = false;
+        _commanderTarget = null;
+        Session.Restart();
+        StartRoulette();
+    }
+
+    /// <summary>⚔ attiva il danno da comandante per quel giocatore; ⚔ "Fine" lo chiude.</summary>
+    private void ToggleCommanderDamage(Player player) =>
+        _commanderTarget = _commanderTarget == player.Id ? null : player.Id;
+
+    private void OpenCounters(Player player, int rotation)
+    {
+        _countersTarget = player;
+        _countersRotation = rotation;
+    }
+
+    private void CloseCounters() => _countersTarget = null;
+
+    private void GoHome() => Navigation.NavigateTo("");
+
+    public async ValueTask DisposeAsync()
+    {
+        _pendingRefresh?.Cancel();
+        _roulette.Dispose();
+
+        if (_game is not null)
+        {
+            _game.Changed -= OnGameChanged;
+            await WakeLock.DisableAsync();
+        }
+    }
+}

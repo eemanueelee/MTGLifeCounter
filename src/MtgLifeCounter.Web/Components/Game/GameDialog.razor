@@ -1,0 +1,37 @@
+@*
+    Cornice comune delle finestre di partita: ruotata come il pannello del giocatore
+    che l'ha aperta e bordata del suo colore. Per chi siede sui lati lo spazio è
+    "orizzontale": se le righe sono più d'una vanno su due colonne.
+    Si chiude toccando fuori dalla finestra.
+*@
+
+<div class="overlay" @onclick="OnClose">
+    <div class="dialog seat-@(Seat % 6) @(Rotation is 90 or 270 && RowCount > 1 ? "landscape" : "")"
+         style="--rotation: @(Rotation)deg" role="dialog" aria-label="@Title" @onclick:stopPropagation>
+
+        <header>
+            <h2>@Title</h2>
+            @if (Subtitle is not null)
+            {
+                <p class="subtitle">@Subtitle</p>
+            }
+        </header>
+
+        <div class="rows">
+            @ChildContent
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public int Seat { get; set; }
+    [Parameter] public int Rotation { get; set; }
+
+    /// <summary>Numero di righe: con una sola riga la finestra resta stretta anche per chi siede di lato.</summary>
+    [Parameter] public int RowCount { get; set; } = 1;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+}
